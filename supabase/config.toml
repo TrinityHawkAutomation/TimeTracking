@@ -1,2 +1,3 @@
-[project]
-id = "bzpaireytureftxjnwbu"
+[api]
+enabled = true
+port = 54321
