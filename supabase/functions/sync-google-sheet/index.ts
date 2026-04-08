@@ -8,13 +8,10 @@
 //    supabase secrets set GOOGLE_PRIVATE_KEY=...
 //    supabase secrets set GOOGLE_SHEET_ID=...
 //
-// 4. Create a Database Webhook in Supabase Dashboard:
-//    - Table: time_entries
-//    - Events: INSERT
-//    - Type: Supabase Edge Function
-//    - Function: sync-google-sheet
+// 4. A database trigger (on_time_entry_insert) on public.time_entries
+//    fires net.http_post to call this function on every INSERT.
 
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 interface TimeEntry {
   id: string
@@ -32,7 +29,17 @@ interface WebhookPayload {
   schema: string
 }
 
-serve(async (req) => {
+// Base64url encode (JWT requires this, not standard base64)
+function base64url(str: string): string {
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+}
+
+function base64urlFromBuffer(buffer: ArrayBuffer): string {
+  return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+}
+
+Deno.serve(async (req) => {
   try {
     const payload: WebhookPayload = await req.json()
 
@@ -56,8 +63,8 @@ serve(async (req) => {
 
     // Create JWT for Google Sheets API
     const now = Math.floor(Date.now() / 1000)
-    const header = btoa(JSON.stringify({ alg: "RS256", typ: "JWT" }))
-    const claim = btoa(
+    const header = base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }))
+    const claim = base64url(
       JSON.stringify({
         iss: serviceAccountEmail,
         scope: "https://www.googleapis.com/auth/spreadsheets",
@@ -85,9 +92,7 @@ serve(async (req) => {
     )
 
     const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, signData)
-    const jwt = `${header}.${claim}.${btoa(
-      String.fromCharCode(...new Uint8Array(signature))
-    )}`
+    const jwt = `${header}.${claim}.${base64urlFromBuffer(signature)}`
 
     // Exchange JWT for access token
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
@@ -95,7 +100,15 @@ serve(async (req) => {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
     })
-    const { access_token } = await tokenRes.json()
+    const tokenData = await tokenRes.json()
+
+    if (!tokenData.access_token) {
+      console.error("Token exchange failed:", JSON.stringify(tokenData))
+      return new Response(
+        JSON.stringify({ error: "Token exchange failed", details: tokenData }),
+        { status: 500 }
+      )
+    }
 
     // Format duration as HH:MM:SS
     const hrs = Math.floor(duration_seconds / 3600)
@@ -109,7 +122,7 @@ serve(async (req) => {
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${access_token}`,
+          Authorization: `Bearer ${tokenData.access_token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -119,7 +132,7 @@ serve(async (req) => {
     )
 
     const result = await appendRes.json()
-    return new Response(JSON.stringify(result), { status: 200 })
+    return new Response(JSON.stringify(result), { status: appendRes.ok ? 200 : 500 })
   } catch (error) {
     console.error("Error:", error)
     return new Response(JSON.stringify({ error: error.message }), { status: 500 })

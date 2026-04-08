@@ -74,3 +74,42 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.create_default_buttons();
+
+-- ============================================
+-- Google Sheets sync via Edge Function
+-- Requires pg_net extension for async HTTP
+-- ============================================
+
+CREATE EXTENSION IF NOT EXISTS pg_net SCHEMA extensions;
+
+CREATE OR REPLACE FUNCTION public.handle_time_entry_insert()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  PERFORM net.http_post(
+    url := 'https://bzpaireytureftxjnwbu.supabase.co/functions/v1/sync-google-sheet',
+    body := jsonb_build_object(
+      'type', 'INSERT',
+      'table', 'time_entries',
+      'schema', 'public',
+      'record', jsonb_build_object(
+        'id', NEW.id,
+        'label', NEW.label,
+        'start_time', NEW.start_time,
+        'end_time', NEW.end_time,
+        'duration_seconds', NEW.duration_seconds,
+        'created_at', NEW.created_at
+      )
+    )
+  );
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_time_entry_insert ON public.time_entries;
+CREATE TRIGGER on_time_entry_insert
+  AFTER INSERT ON public.time_entries
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_time_entry_insert();
