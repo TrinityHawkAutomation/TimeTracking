@@ -15,6 +15,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 interface TimeEntry {
   id: string
+  user_id: string
+  user_email: string
   label: string
   start_time: string
   end_time: string
@@ -47,7 +49,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ message: "Ignored" }), { status: 200 })
     }
 
-    const { label, start_time, end_time, duration_seconds } = payload.record
+    const { user_email, label, start_time, end_time, duration_seconds } = payload.record
 
     const serviceAccountEmail = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_EMAIL")
     const privateKey = Deno.env.get("GOOGLE_PRIVATE_KEY")?.replace(/\\n/g, "\n")
@@ -118,7 +120,7 @@ Deno.serve(async (req) => {
 
     // Append row to Google Sheet
     const appendRes = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!A:E:append?valueInputOption=USER_ENTERED`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!A:G:append?valueInputOption=USER_ENTERED`,
       {
         method: "POST",
         headers: {
@@ -126,7 +128,7 @@ Deno.serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          values: [[label, start_time, end_time, durationStr, new Date().toISOString()]],
+          values: [[user_email || "unknown", label, start_time, end_time, durationStr, new Date().toISOString()]],
         }),
       }
     )

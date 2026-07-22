@@ -87,7 +87,11 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
+DECLARE
+  user_email TEXT;
 BEGIN
+  SELECT email INTO user_email FROM auth.users WHERE id = NEW.user_id;
+
   PERFORM net.http_post(
     url := 'https://bzpaireytureftxjnwbu.supabase.co/functions/v1/sync-google-sheet',
     body := jsonb_build_object(
@@ -96,6 +100,8 @@ BEGIN
       'schema', 'public',
       'record', jsonb_build_object(
         'id', NEW.id,
+        'user_id', NEW.user_id,
+        'user_email', user_email,
         'label', NEW.label,
         'start_time', NEW.start_time,
         'end_time', NEW.end_time,
