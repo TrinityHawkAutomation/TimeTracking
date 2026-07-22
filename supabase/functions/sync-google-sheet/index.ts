@@ -41,6 +41,12 @@ function base64urlFromBuffer(buffer: ArrayBuffer): string {
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
 }
 
+function formatTimestamp(iso: string): string {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
+
 Deno.serve(async (req) => {
   try {
     const payload: WebhookPayload = await req.json()
@@ -128,7 +134,7 @@ Deno.serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          values: [[user_email || "unknown", label, start_time, end_time, durationStr, new Date().toISOString()]],
+          values: [[user_email || "unknown", label, formatTimestamp(start_time), formatTimestamp(end_time), durationStr, formatTimestamp(new Date().toISOString())]],
         }),
       }
     )
