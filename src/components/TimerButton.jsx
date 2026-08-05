@@ -27,7 +27,7 @@ export default function TimerButton({ label, color, isActive, elapsed, onPress }
       {isActive && (
         <span className="absolute top-2 right-3 w-3 h-3 rounded-full bg-white/80 animate-pulse" />
       )}
-      <span className="text-xl sm:text-2xl leading-tight px-2 truncate max-w-full">
+      <span className="text-xl sm:text-2xl leading-tight px-2 line-clamp-2 break-words">
         {label}
       </span>
       {isActive && (

@@ -7,7 +7,7 @@
 CREATE TABLE IF NOT EXISTS public.button_configs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  position INTEGER NOT NULL CHECK (position >= 0 AND position <= 7),
+  position INTEGER NOT NULL CHECK (position >= 0 AND position <= 11),
   label TEXT NOT NULL DEFAULT 'Client',
   color TEXT NOT NULL DEFAULT '#3B82F6',
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
@@ -59,9 +59,10 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  colors TEXT[] := ARRAY['#3B82F6','#EF4444','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#F97316'];
+  colors TEXT[] := ARRAY['#3B82F6','#EF4444','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#F97316',
+                         '#84CC16','#14B8A6','#6366F1','#78716C'];
 BEGIN
-  FOR i IN 0..7 LOOP
+  FOR i IN 0..11 LOOP
     INSERT INTO public.button_configs (user_id, position, label, color)
     VALUES (NEW.id, i, 'Client ' || (i + 1), colors[i + 1]);
   END LOOP;
