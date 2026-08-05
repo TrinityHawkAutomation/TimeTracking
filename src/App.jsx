@@ -11,7 +11,7 @@ import SettingsScreen from './components/SettingsScreen'
 export default function App() {
   const { user, loading: authLoading, error, signIn, signUp, signOut, setError } = useAuth()
   const { isDark, toggle: toggleDark } = useDarkMode()
-  const { buttons, loading: buttonsLoading, updateButton } = useButtons(user?.id)
+  const { buttons, loading: buttonsLoading, error: buttonsError, updateButton } = useButtons(user?.id)
   const { activeIndex, elapsed, handlePress } = useTimer(user?.id, buttons)
   const [screen, setScreen] = useState('grid')
 
@@ -44,7 +44,13 @@ export default function App() {
         onSignOut={signOut}
         screen={screen}
       />
-      {screen === 'settings' ? (
+      {buttonsError ? (
+        <div className="flex-1 flex items-center justify-center p-6">
+          <p className="text-center text-lg text-red-600 dark:text-red-400">
+            {buttonsError}
+          </p>
+        </div>
+      ) : screen === 'settings' ? (
         <SettingsScreen buttons={buttons} onUpdate={updateButton} />
       ) : (
         <TimerGrid

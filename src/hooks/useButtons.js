@@ -9,6 +9,8 @@ const COLORS = [
   '#84CC16', '#14B8A6', '#6366F1', '#78716C',
 ]
 
+// Insert template only - these have no `id`, so they must never reach the grid.
+// Rendering them lets a press save a time_entry with a NULL button_id.
 const DEFAULT_BUTTONS = Array.from({ length: BUTTON_COUNT }, (_, i) => ({
   position: i,
   label: `Client ${i + 1}`,
@@ -16,11 +18,13 @@ const DEFAULT_BUTTONS = Array.from({ length: BUTTON_COUNT }, (_, i) => ({
 }))
 
 export function useButtons(userId) {
-  const [buttons, setButtons] = useState(DEFAULT_BUTTONS)
+  const [buttons, setButtons] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   const fetchButtons = useCallback(async () => {
     if (!userId) return
+    setError(null)
     const { data, error } = await supabase
       .from('button_configs')
       .select('*')
@@ -29,6 +33,8 @@ export function useButtons(userId) {
 
     if (error) {
       console.error('Error fetching buttons:', error)
+      setError('Could not load your buttons. Check your connection and reload.')
+      setButtons([])
       setLoading(false)
       return
     }
@@ -42,6 +48,8 @@ export function useButtons(userId) {
         .select()
       if (insertError) {
         console.error('Error creating defaults:', insertError)
+        setError('Could not set up your buttons. Reload to try again.')
+        setButtons([])
       } else {
         setButtons(created.sort((a, b) => a.position - b.position))
       }
@@ -89,5 +97,5 @@ export function useButtons(userId) {
     )
   }
 
-  return { buttons, loading, updateButton, refetch: fetchButtons }
+  return { buttons, loading, error, updateButton, refetch: fetchButtons }
 }
