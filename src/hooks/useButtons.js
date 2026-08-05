@@ -89,12 +89,13 @@ export function useButtons(userId) {
 
     if (error) {
       console.error('Error updating button:', error)
-      return
+      return { error }
     }
 
     setButtons(prev =>
       prev.map(b => (b.id === id ? { ...b, ...updates } : b))
     )
+    return { error: null }
   }
 
   return { buttons, loading, error, updateButton, refetch: fetchButtons }
