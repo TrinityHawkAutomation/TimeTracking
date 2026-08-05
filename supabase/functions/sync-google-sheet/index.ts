@@ -126,7 +126,10 @@ Deno.serve(async (req) => {
 
     // Append row to Google Sheet
     const appendRes = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!A:G:append?valueInputOption=USER_ENTERED`,
+      // A:F matches the six columns written below. Keep these in sync - a wider
+      // range lets stray data (e.g. a fill-down formula in G) push the detected
+      // table further down, so appends land below a block of blank rows.
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!A:F:append?valueInputOption=USER_ENTERED`,
       {
         method: "POST",
         headers: {
