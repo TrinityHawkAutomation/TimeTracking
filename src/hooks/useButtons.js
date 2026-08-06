@@ -53,25 +53,12 @@ export function useButtons(userId) {
       } else {
         setButtons(created.sort((a, b) => a.position - b.position))
       }
-    } else if (data.length < BUTTON_COUNT) {
-      // Existing user from before the grid grew - fill in the new slots
-      const taken = new Set(data.map(b => b.position))
-      const missing = DEFAULT_BUTTONS
-        .filter(b => !taken.has(b.position))
-        .map(b => ({ ...b, user_id: userId }))
-
-      const { data: added, error: backfillError } = await supabase
-        .from('button_configs')
-        .insert(missing)
-        .select()
-
-      if (backfillError) {
-        console.error('Error backfilling buttons:', backfillError)
-        setButtons(data)
-      } else {
-        setButtons([...data, ...added].sort((a, b) => a.position - b.position))
-      }
     } else {
+      // Render whatever exists - do NOT pad up to BUTTON_COUNT. business-command-centre
+      // (src/lib/timetrack/blocks.ts) reconciles this table against a canonical set of
+      // internal labels + active Reevo projects, and deletes every label outside it.
+      // Padding with `Client N` placeholders just gets deleted on the next sync, and the
+      // grid re-creates them on the next load. The layout handles any count.
       setButtons(data)
     }
     setLoading(false)
